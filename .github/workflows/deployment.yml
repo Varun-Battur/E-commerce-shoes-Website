@@ -6,17 +6,6 @@ on:
       - main
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -41,7 +30,7 @@ jobs:
       - name: Run tests with Maven
         run: mvn test
 
-  build:
+  build-and-package:
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -62,31 +51,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Build package and generate Javadocs
-        run: |
-          mvn -B clean package -DskipTests
-          mvn javadoc:javadoc || true  # Generates the static HTML documentation
+      - name: Build production package with Maven
+        run: mvn -B clean package -DskipTests
 
-      - name: Upload build artifact
+      - name: Archive Executable JAR File
         uses: actions/upload-artifact@v4
         with:
-          name: store-app
+          name: store-app-executable
           path: target/*.jar
-
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # This specifies the static directory to upload. 
-          # Change this to "dist/" or "public/" if you add a static frontend folder later!
-          path: 'target/site/apidocs/'
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy static files to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          retention-days: 7
